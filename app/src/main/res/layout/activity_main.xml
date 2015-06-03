@@ -55,6 +55,7 @@
         android:id="@+id/btnRemove"
         android:layout_alignTop="@+id/btnAdd"
         android:layout_toRightOf="@+id/btnAdd"
-        android:layout_toEndOf="@+id/btnAdd" />
+        android:layout_toEndOf="@+id/btnAdd"
+        android:enabled="false" />
 
 </RelativeLayout>

@@ -7,6 +7,8 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -43,19 +45,20 @@ public class MainActivity extends Activity {
                     String newName="";
                     int fileSize=0;
                     try{
-                        InputStream is=new FileInputStream(getResources().openRawResource(R.id.names));
-                        BufferedReader reader=new BufferedReader(new InputStreamReader(is));
+                        InputStream is=getResources().openRawResource(R.raw.names);
+                        BufferedReader reader=new BufferedReader(new InputStreamReader(getResources().openRawResource(R.raw.names)));
                         try {
                             byte[] c = new byte[1024];
                             int readChars = 0;
                             while ((readChars = is.read(c)) != -1) {
                                 for (int p = 0; p < readChars; ++p) {
-                                    if (c[i] == '\n') {
+                                    if (c[p] == (byte)'\n') {
                                         ++fileSize;
                                     }
                                 }
                             }
-                            for(int line=0;line<r.nextInt(fileSize);line++){
+                            int qwe=r.nextInt(fileSize);
+                            for(int line=0;line<qwe;line++){
                                 reader.readLine();
                             }
                             newName=reader.readLine();
@@ -81,6 +84,23 @@ public class MainActivity extends Activity {
             }
         };
         findViewById(R.id.btnRemove).setOnClickListener(oclBtnRemove);
+        ((EditText)findViewById(R.id.suffix)).addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                findViewById(R.id.btnRemove).setEnabled(((EditText)findViewById(R.id.suffix)).getText().toString().length()>0);
+            }
+        });
+        findViewById(R.id.btnRemove).setEnabled(false);
     }
 
     @Override
