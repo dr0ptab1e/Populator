@@ -42,7 +42,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Добавить"
+        android:text="@string/btnCreate"
         android:id="@+id/btnAdd"
         android:layout_below="@+id/suffix"
         android:layout_alignParentLeft="true"
@@ -51,7 +51,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Удалить"
+        android:text="@string/btnRemove"
         android:id="@+id/btnRemove"
         android:layout_alignTop="@+id/btnAdd"
         android:layout_toRightOf="@+id/btnAdd"

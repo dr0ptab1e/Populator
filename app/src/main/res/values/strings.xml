@@ -3,4 +3,10 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="btnCreate">Добавить</string>
+    <string name="btnRemove">Удалить</string>
+    <string name="pdCreating">Создание контактов</string>
+    <string name="pdRemoving">Удаление контактов</string>
+    <string name="done">Готово</string>
+    <string name="cancel">Стоп</string>
 </resources>

@@ -1,10 +1,14 @@
 package firstproject.populator;
 
 import android.app.Activity;
+import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.ContentProviderOperation;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.text.Editable;
@@ -12,14 +16,10 @@ import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -28,7 +28,7 @@ import java.util.Random;
 
 
 public class MainActivity extends Activity {
-
+    ProgressDialog pd;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,42 +36,81 @@ public class MainActivity extends Activity {
         View.OnClickListener oclBtnCreate=new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for(int i=0;i<Integer.parseInt(((EditText) findViewById(R.id.textAmount)).getText().toString());i++){
-                    Random r=new Random();
-                    StringBuilder newNumber=new StringBuilder("+7");
-                    for(int l=0;l<10;l++) {
-                        newNumber.append(r.nextInt(10));
-                    }
-                    String newName="";
-                    int fileSize=0;
-                    try{
-                        InputStream is=getResources().openRawResource(R.raw.names);
-                        BufferedReader reader=new BufferedReader(new InputStreamReader(getResources().openRawResource(R.raw.names)));
-                        try {
-                            byte[] c = new byte[1024];
-                            int readChars = 0;
-                            while ((readChars = is.read(c)) != -1) {
-                                for (int p = 0; p < readChars; ++p) {
-                                    if (c[p] == (byte)'\n') {
-                                        ++fileSize;
+                final AsyncTask task=new AsyncTask() {
+                    @Override
+                    protected Object doInBackground(Object[] params) {
+                        for(int i=0;i<Integer.parseInt(((EditText) findViewById(R.id.textAmount)).getText().toString());i++){
+                            if(Thread.interrupted()){
+                                return -1;
+                            }
+                            Random r=new Random();
+                            StringBuilder newNumber=new StringBuilder("+7");
+                            for(int l=0;l<10;l++) {
+                                newNumber.append(r.nextInt(10));
+                            }
+                            String newName="";
+                            int fileSize=0;
+                            try{
+                                InputStream is=getResources().openRawResource(R.raw.names);
+                                BufferedReader reader=new BufferedReader(new InputStreamReader(getResources().openRawResource(R.raw.names)));
+                                try {
+                                    byte[] c = new byte[1024];
+                                    int readChars = 0;
+                                    while ((readChars = is.read(c)) != -1) {
+                                        for (int p = 0; p < readChars; ++p) {
+                                            if (c[p] == (byte)'\n') {
+                                                ++fileSize;
+                                            }
+                                        }
                                     }
+                                    int qwe=r.nextInt(fileSize);
+                                    for(int line=0;line<qwe;line++){
+                                        reader.readLine();
+                                    }
+                                    newName=reader.readLine();
+                                } finally {
+                                    is.close();
+                                    reader.close();
                                 }
+                            } catch (FileNotFoundException e) {
+                                e.printStackTrace();
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
-                            int qwe=r.nextInt(fileSize);
-                            for(int line=0;line<qwe;line++){
-                                reader.readLine();
-                            }
-                            newName=reader.readLine();
-                        } finally {
-                            is.close();
-                            reader.close();
+                            addContact(newName + "_" + ((EditText)findViewById(R.id.suffix)).getText().toString(),newNumber.toString());
+                            publishProgress(i+1);
                         }
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                        return null;
                     }
-                addContact(newName + "_" + ((EditText)findViewById(R.id.suffix)).getText().toString(),newNumber.toString());
+                    @Override
+                    protected void onPostExecute(Object o) {
+                        super.onPostExecute(o);
+                        Toast.makeText(getApplicationContext(), R.string.done, Toast.LENGTH_LONG).show();
+                    }
+
+                    @Override
+                    protected void onProgressUpdate(Object[] values) {
+                        super.onProgressUpdate(values);
+                        pd.incrementProgressBy(1);
+                        if(pd.getProgress()==pd.getMax()){
+                            pd.dismiss();
+                        }
+                    }
+                };
+                task.execute();
+                int amount=Integer.parseInt(((EditText) findViewById(R.id.textAmount)).getText().toString());
+                if(amount>10){
+                    pd=new ProgressDialog(MainActivity.this);
+                    pd.setTitle(R.string.pdCreating);
+                    pd.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                    pd.setMax(amount);
+                    pd.setButton(Dialog.BUTTON_POSITIVE, getString(R.string.cancel), new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            task.cancel(true);
+                        }
+                    });
+                    pd.show();
                 }
             }
         };
@@ -80,24 +119,70 @@ public class MainActivity extends Activity {
         View.OnClickListener oclBtnRemove=new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                deleteContacts(getApplicationContext(), ((EditText) findViewById(R.id.suffix)).getText().toString());
+                final AsyncTask task=new AsyncTask() {
+                    @Override
+                    protected Object doInBackground(Object[] params) {
+                        Uri contactUri = ContactsContract.Contacts.CONTENT_URI;
+                        Cursor cur = getApplicationContext().getContentResolver().query(contactUri, null, null, null, null);
+                        try {
+                            if (cur.moveToFirst()) {
+                                do {
+                                    if(Thread.interrupted()){
+                                        return -1;
+                                    }
+                                    if (cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)).endsWith("_"+((EditText) findViewById(R.id.suffix)).getText().toString())) {
+                                        String lookupKey = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.LOOKUP_KEY));
+                                        Uri uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_LOOKUP_URI, lookupKey);
+                                        pd.incrementProgressBy(getApplicationContext().getContentResolver().delete(uri, null, null));
+                                        if(pd.getProgress()==pd.getMax()){
+                                            pd.dismiss();
+                                        }
+                                    }
+                                } while (cur.moveToNext());
+                            }
+                        } catch (Exception e) {
+                            System.out.println(e.getStackTrace());
+                        } finally {
+                            cur.close();
+                        }
+                        return null;
+                    }
+                    @Override
+                    protected void onPostExecute(Object o) {
+                        super.onPostExecute(o);
+                        Toast.makeText(getApplicationContext(), R.string.done, Toast.LENGTH_LONG).show();
+                    }
+                };
+                task.execute();
+                int amount=countContacts(getApplicationContext(), ((EditText) findViewById(R.id.suffix)).getText().toString());
+                if(amount>10){
+                    pd=new ProgressDialog(MainActivity.this);
+                    pd.setTitle(R.string.pdRemoving);
+                    pd.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                    pd.setMax(amount);
+                    pd.setButton(Dialog.BUTTON_POSITIVE, getString(R.string.cancel), new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            task.cancel(true);
+                        }
+                    });
+                    pd.show();
+                }
             }
         };
         findViewById(R.id.btnRemove).setOnClickListener(oclBtnRemove);
         ((EditText)findViewById(R.id.suffix)).addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
             }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-
             }
 
             @Override
             public void afterTextChanged(Editable s) {
-                findViewById(R.id.btnRemove).setEnabled(((EditText)findViewById(R.id.suffix)).getText().toString().length()>0);
+                findViewById(R.id.btnRemove).setEnabled(((EditText) findViewById(R.id.suffix)).getText().toString().length() > 0);
             }
         });
         findViewById(R.id.btnRemove).setEnabled(false);
@@ -125,27 +210,26 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    public static boolean deleteContacts(Context ctx, String suffix) {
+    public static int countContacts(Context ctx, String suffix) {
         Uri contactUri = ContactsContract.Contacts.CONTENT_URI;
         Cursor cur = ctx.getContentResolver().query(contactUri, null, null, null, null);
+        int count=0;
         try {
             if (cur.moveToFirst()) {
                 do {
-                    if (cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)).contains(suffix)) {
+                    if (cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)).endsWith("_"+suffix)) {
                         String lookupKey = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.LOOKUP_KEY));
                         Uri uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_LOOKUP_URI, lookupKey);
-                        ctx.getContentResolver().delete(uri, null, null);
+                        count++;
                     }
-
                 } while (cur.moveToNext());
             }
-
         } catch (Exception e) {
             System.out.println(e.getStackTrace());
         } finally {
             cur.close();
         }
-        return false;
+        return count;
     }
 
     private void addContact(String name, String mobileNumber){
