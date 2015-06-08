@@ -6,13 +6,18 @@ import android.app.ProgressDialog;
 import android.content.ContentProviderOperation;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.ResultReceiver;
 import android.provider.ContactsContract;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -29,6 +34,7 @@ import java.util.Random;
 
 public class MainActivity extends Activity {
     ProgressDialog pd;
+    int message;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -101,9 +107,11 @@ public class MainActivity extends Activity {
                 int amount=Integer.parseInt(((EditText) findViewById(R.id.textAmount)).getText().toString());
                 if(amount>10){
                     pd=new ProgressDialog(MainActivity.this);
-                    pd.setTitle(R.string.pdCreating);
+                    message=R.string.pdCreating;
+                    pd.setTitle(message);
                     pd.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
                     pd.setMax(amount);
+                    pd.setOwnerActivity(MainActivity.this);
                     pd.setButton(Dialog.BUTTON_POSITIVE, getString(R.string.cancel), new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
@@ -157,7 +165,8 @@ public class MainActivity extends Activity {
                 int amount=countContacts(getApplicationContext(), ((EditText) findViewById(R.id.suffix)).getText().toString());
                 if(amount>10){
                     pd=new ProgressDialog(MainActivity.this);
-                    pd.setTitle(R.string.pdRemoving);
+                    message=R.string.pdRemoving;
+                    pd.setTitle(message);
                     pd.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
                     pd.setMax(amount);
                     pd.setButton(Dialog.BUTTON_POSITIVE, getString(R.string.cancel), new DialogInterface.OnClickListener() {
@@ -166,6 +175,7 @@ public class MainActivity extends Activity {
                             task.cancel(true);
                         }
                     });
+                    pd.setOwnerActivity(MainActivity.this);
                     pd.show();
                 }
             }
@@ -186,6 +196,19 @@ public class MainActivity extends Activity {
             }
         });
         findViewById(R.id.btnRemove).setEnabled(false);
+        if(pd!=null){
+            pd.show();
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        //Log.e("GOVNO", new Integer(pd.getProgress()).toString());
+        if(pd!=null && pd.isShowing()){
+            ProgressReceiver receiver=new ProgressReceiver(new Handler());
+            MyIntentService.startActionRedrawPD(getApplicationContext(),pd.getProgress(),message,receiver);
+        }
+        super.onConfigurationChanged(newConfig);
     }
 
     @Override
@@ -267,6 +290,22 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(getApplicationContext(), "Exception: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    private class ProgressReceiver extends ResultReceiver{
+
+        @Override
+        protected void onReceiveResult(int resultCode, Bundle resultData) {
+            super.onReceiveResult(resultCode, resultData);
+            int progress=resultData.getInt("progress");
+            int message=resultData.getInt("message");
+            pd.setProgress(progress);
+            pd.setMessage(getString(message));
+            pd.show();
+        }
+
+        public ProgressReceiver(Handler handler) {
+            super(handler);
         }
     }
 }
