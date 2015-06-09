@@ -97,7 +97,7 @@ public class MainActivity extends Activity {
                     @Override
                     protected void onProgressUpdate(Object[] values) {
                         super.onProgressUpdate(values);
-                        pd.incrementProgressBy(1);
+                        pd.setProgress((Integer)values[0]);
                         if(pd.getProgress()==pd.getMax()){
                             pd.dismiss();
                         }
@@ -130,6 +130,7 @@ public class MainActivity extends Activity {
                 final AsyncTask task=new AsyncTask() {
                     @Override
                     protected Object doInBackground(Object[] params) {
+                        int progress=0;
                         Uri contactUri = ContactsContract.Contacts.CONTENT_URI;
                         Cursor cur = getApplicationContext().getContentResolver().query(contactUri, null, null, null, null);
                         try {
@@ -141,7 +142,8 @@ public class MainActivity extends Activity {
                                     if (cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)).endsWith("_"+((EditText) findViewById(R.id.suffix)).getText().toString())) {
                                         String lookupKey = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.LOOKUP_KEY));
                                         Uri uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_LOOKUP_URI, lookupKey);
-                                        pd.incrementProgressBy(getApplicationContext().getContentResolver().delete(uri, null, null));
+                                        progress+=getApplicationContext().getContentResolver().delete(uri, null, null);
+                                        pd.setProgress(progress);
                                         if(pd.getProgress()==pd.getMax()){
                                             pd.dismiss();
                                         }
